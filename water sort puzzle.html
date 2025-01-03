@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Sort Puzzle</title>
+    
+    <style>
+        body {
+            background-image: url("https://store-images.s-microsoft.com/image/apps.2970.14564899734372140.e892ffc6-3e82-4112-af8d-f48f4606884b.fa705151-4131-423d-b62a-5b3a62559761?h=1280");
+            background-repeat: no-repeat;
+            background-size:cover;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    backgrond: linear-gradient(to bottom, #1e7245, #029245);
+    color: white;
+    text-align: center;
+}
+
+#loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
+#game {
+    display: none;
+    flex-direction: column;
+    height: 100vh;
+}
+
+header {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 10px 0;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+#game-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 20px;
+    justify-content: center;
+    align-content: center;
+    padding: 20px;
+}
+
+.tube {
+    width: 100px;
+    height: 300px;
+    border: 2px solid #ffffff;
+    border-radius: 10px;
+    background: #dddddd;
+    display: flex;
+    flex-direction: column-reverse;
+    position: relative;
+    overflow: hidden;
+}
+
+.liquid {
+    width: 100%;
+    height: 25%;
+    border-radius: 5px 5px 0 0;
+    transition: transform 0.2s ease-in-out;
+}
+
+footer {
+    padding: 10px 0;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+button {
+    padding: 10px 20px;
+    margin: 0 10px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 5px;
+    background: white;
+    color: #333;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+button:hover {
+    background: #f0f0f0;
+}
+
+    </style>
+</head>
+<body>
+    
+    <div id="loading">
+        <h1>Water Sort Puzzle</h1>
+        <p>Loading game... </p>
+        <p>Please wait </p>
+    </div>
+
+    <div id="game">
+        <header>
+            <div id="level-display">Level: 1</div>
+            <div id="score-display">Score: 0</div>
+        </header>
+        <main>
+            <div id="game-container"></div>
+        </main>
+        <footer>
+            <button id="reset-btn">Reset</button>
+            <button id="next-level-btn">Next Level</button>
+        </footer>
+    </div>
+
+    <script>
+const gameContainer = document.getElementById("game-container");
+const levelDisplay = document.getElementById("level-display");
+const scoreDisplay = document.getElementById("score-display");
+const resetBtn = document.getElementById("reset-btn");
+const nextLevelBtn = document.getElementById("next-level-btn");
+const loadingScreen = document.getElementById("loading");
+const game = document.getElementById("game");
+
+let levels = [];
+let currentLevel = 0;
+let score = 0;
+let selectedTube = null;
+
+// Generate Levels
+function generateLevels() {
+    for (let i = 0; i < 20; i++) {
+        const level = [];
+        const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange'];
+        const tubes = i + 3;
+
+        for (let j = 0; j < tubes - 2; j++) {
+            const tube = [];
+            for (let k = 0; k < 4; k++) {
+                tube.push(colors[Math.floor(Math.random() * colors.length)]);
+            }
+            level.push(tube);
+        }
+
+        for (let j = 0; j < 2; j++) {
+            level.push([]);
+        }
+
+        levels.push(level);
+    }
+}
+
+// Render Level
+function renderLevel(level) {
+    gameContainer.innerHTML = "";
+    level.forEach((tube, index) => {
+        const tubeDiv = document.createElement("div");
+        tubeDiv.classList.add("tube");
+        tubeDiv.dataset.index = index;
+
+        tube.forEach(color => {
+            const liquidDiv = document.createElement("div");
+            liquidDiv.classList.add("liquid");
+            liquidDiv.style.backgroundColor = color;
+            tubeDiv.appendChild(liquidDiv);
+        });
+
+        tubeDiv.addEventListener("click", () => handleTubeClick(index));
+        gameContainer.appendChild(tubeDiv);
+    });
+}
+
+// Handle Tube Click
+function handleTubeClick(index) {
+    if (selectedTube === null) {
+        selectedTube = index;
+        highlightTube(index, true);
+    } else {
+        if (selectedTube !== index) {
+            moveLiquid(selectedTube, index);
+        }
+        highlightTube(selectedTube, false);
+        selectedTube = null;
+    }
+}
+
+// Highlight Tube
+function highlightTube(index, highlight) {
+    const tube = gameContainer.children[index];
+    tube.style.border = highlight ? "3px solid gold" : "2px solid #ffffff";
+}
+
+// Move Liquid
+function moveLiquid(fromIndex, toIndex) {
+    const fromTube = levels[currentLevel][fromIndex];
+    const toTube = levels[currentLevel][toIndex];
+
+    if (fromTube.length === 0) return;
+
+    const liquidToMove = fromTube[fromTube.length - 1];
+    if (toTube.length === 4 || (toTube.length > 0 && toTube[toTube.length - 1] !== liquidToMove)) {
+        return;
+    }
+
+    fromTube.pop();
+    toTube.push(liquidToMove);
+    renderLevel(levels[currentLevel]);
+    checkWinCondition();
+}
+
+// Check Win Condition
+function checkWinCondition() {
+    const isWin = levels[currentLevel].every(tube => tube.length === 0 || tube.every(color => color === tube[0]));
+
+    if (isWin) {
+        alert("Level Completed!");
+        score += 100;
+        scoreDisplay.textContent = `Score: ${score}`;
+    }
+}
+
+// Reset Game
+resetBtn.addEventListener("click", () => renderLevel(levels[currentLevel]));
+
+// Next Level
+nextLevelBtn.addEventListener("click", () => {
+    if (currentLevel < levels.length - 1) {
+        currentLevel++;
+        renderLevel(levels[currentLevel]);
+        levelDisplay.textContent = `Level: ${currentLevel + 1}`;
+    } else {
+        alert("You've completed all levels!");
+    }
+});
+
+// Initialize Game
+setTimeout(() => {
+    loadingScreen.style.display = "none";
+    game.style.display = "flex";
+    generateLevels();
+    renderLevel(levels[currentLevel]);
+}, 2000);
+
+    </script>
+</body>
+</html>
+
